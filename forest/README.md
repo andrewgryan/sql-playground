@@ -6,6 +6,7 @@ we have 1000 files, we could make a single query to generate dropdown menus and 
 widgets without having to exhaustively search/cache all of that meta-data in the Cloud
 
 ```python
+# Python hierarchical structure
 {
    'time_variables': {
        'time_0': [
