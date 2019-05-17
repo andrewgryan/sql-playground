@@ -64,6 +64,6 @@ after a month we would need to query approx. 2400 files to construct an index or
 1. Find all variables related to model
 
 ```sqlite3
-SELECT DISTINCT v.name FROM variable AS v JOIN file AS f ON f.id = v.file_id;
+SELECT DISTINCT v.name FROM variable AS v JOIN file AS f ON f.id = v.file_id WHERE f.name GLOB 'prefix*.nc';
 ```
 
