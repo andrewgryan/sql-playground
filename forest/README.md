@@ -1,7 +1,9 @@
 
 # Relational NetCDF Atmospheric data
 
-There should be a relational way to map netCDF4 dimension information
+There should be a relational way to map netCDF4 dimension information to a SQL query. If
+we have 1000 files, we could make a single query to generate dropdown menus and other
+widgets without having to exhaustively search/cache all of that meta-data in the Cloud
 
 ```
 {
