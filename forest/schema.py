@@ -35,11 +35,16 @@ def scrape(dataset):
     data['variables'] = {}
     for v, obj in dataset.variables.items():
         if hasattr(obj, "um_stash_source"):
-            data['variables'][v] = coord_variable(dataset, v, 'time')
+            data['variables'][v] = {
+                'time_variable': coord_variable(dataset, v, 'time'),
+                'pressure_variable': coord_variable(dataset, v, 'pressure'),
+            }
 
     d = {}
     for v, obj in dataset.variables.items():
         if not v.startswith('time'):
+            continue
+        if v.endswith('bnds'):
             continue
         values = obj[:]
         if values.ndim == 0:
@@ -115,6 +120,14 @@ CREATE TABLE variable_to_pressure (
                 value = str(time)
                 cursor.execute(
                     "INSERT OR IGNORE INTO time (i, value) VALUES (?,?)", (i, value))
+
+        # Link variables with times
+        for variable in obj['variables']:
+            print(variable, file_name)
+            time_variable = obj['variables'][variable]['time_variable']
+            times = obj['time_variables'][time_variable]
+            for i, time in enumerate(times):
+                value = str(time)
                 print(file_name, variable, i, value)
                 cursor.execute("""
 INSERT INTO variable_to_time (variable_id, time_id) VALUES (
