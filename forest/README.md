@@ -63,7 +63,19 @@ after a month we would need to query approx. 2400 files to construct an index or
 
 1. Find all variables related to model
 
-```sqlite3
-SELECT DISTINCT v.name FROM variable AS v JOIN file AS f ON f.id = v.file_id WHERE f.name GLOB 'prefix*.nc';
+```sql
+SELECT DISTINCT v.name FROM variable AS v JOIN file AS f ON f.id = v.file_id 
+WHERE f.name GLOB 'prefix*.nc';
+```
+
+2. Find times related to variable in model
+
+```sql
+SELECT DISTINCT t.value FROM time AS t 
+   JOIN variable_to_time as v2t ON v2t.time_id = t.id
+   JOIN variable AS v ON v2t.variable_id = v.id
+   JOIN file AS f ON v.file_id = f.id
+      WHERE f.name GLOB 'pattern'
+         AND v.name = 'relative_humidity';
 ```
 
