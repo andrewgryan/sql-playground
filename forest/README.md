@@ -9,7 +9,9 @@ widgets without having to exhaustively search/cache all of that meta-data in the
 {
    'variables': {
       'time_0': {
-        'values': []
+        'values': [
+            '2019-05-13T18:00:00'
+        ]
       },
       'relative_humidity': {
         'time_variable': 'time_0'
@@ -18,7 +20,8 @@ widgets without having to exhaustively search/cache all of that meta-data in the
 }
 ```
 
-In SQL land we can keep track of unique time values and a mapping from variables
+In SQL land we can keep track of unique time values and a mapping from variables, this can be achieved
+since every (file, variable) has a unique id and every (i, time) pair has a unique id.
 
 ```
 
