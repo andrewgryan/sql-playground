@@ -43,7 +43,7 @@ id name reference
      
 variable
 --------
-id name file_id
+id name time_axis pressure_axis file_id
 
 variable_to_id
 --------------
