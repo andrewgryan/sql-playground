@@ -5,7 +5,7 @@ There should be a relational way to map netCDF4 dimension information to a SQL q
 we have 1000 files, we could make a single query to generate dropdown menus and other
 widgets without having to exhaustively search/cache all of that meta-data in the Cloud
 
-```json
+```python
 {
    'time_variables': {
        'time_0': [
