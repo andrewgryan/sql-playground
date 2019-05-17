@@ -40,4 +40,4 @@ id i value
 ```
 
 The idea being that a meta-data lookup on S3 takes 200ms per file, if we have 20 files per run and 4 runs per day
-after a month we would need to query approx. 240 files to construct an index
+after a month we would need to query approx. 2400 files to construct an index or about 50 minutes to catalogue. But on a local machine it may only take a few microseconds to insert a few rows as a new file is available and sync the database with S3
