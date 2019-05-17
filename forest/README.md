@@ -10,12 +10,23 @@ widgets without having to exhaustively search/cache all of that meta-data in the
 {
    'time_variables': {
        'time_0': [
-            '2019-05-13T18:00:00'
+            '2019-05-13T18:00:00',
+            ...
+        ]
+   },
+   'pressure_variables': {
+       'pressure_1': [
+            1000.000001,
+            950.00001,
+            ...
         ]
    },
    'variables': {
       'relative_humidity': {
-        'time_variable': 'time_0'
+        'time_axis': 0,
+        'time_variable': 'time_0',
+        'pressure_axis': 0,
+        'pressure_variable': 'pressure_1'
       }
    }
 }
