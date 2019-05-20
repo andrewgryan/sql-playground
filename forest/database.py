@@ -17,7 +17,8 @@ class Database(object):
                     id INTEGER PRIMARY KEY,
                     name TEXT,
                     file_id INTEGER,
-                    FOREIGN KEY(file_id) REFERENCES file(id))
+                    FOREIGN KEY(file_id) REFERENCES file(id),
+                    UNIQUE(name, file_id))
         """)
         self.cursor.execute("""
             CREATE TABLE IF NOT EXISTS pressure (
@@ -50,6 +51,16 @@ class Database(object):
         """Create database instance from location on disk or :memory:"""
         return cls(sqlite3.connect(path))
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.close()
+
+    def close(self):
+        self.connection.commit()
+        self.connection.close()
+
     def insert_file_name(self, path):
         self.cursor.execute(
             "INSERT OR IGNORE INTO file (name) VALUES (:path)",
@@ -58,9 +69,14 @@ class Database(object):
     def insert_variable(self, path, variable):
         self.insert_file_name(path)
         self.cursor.execute("""
-            INSERT INTO variable (name, file_id) VALUES (
+            INSERT OR IGNORE INTO variable (name, file_id) VALUES (
                 :variable, (SELECT id FROM file WHERE name=:path))
         """, dict(path=path, variable=variable))
+
+    def insert_pressures(self, path, variable, values):
+        """Helper method to insert a coordinate related to a variable"""
+        for i, value in enumerate(values):
+            self.insert_pressure(path, variable, value, i)
 
     def insert_pressure(self, path, variable, pressure, i):
         self.insert_variable(path, variable)

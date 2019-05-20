@@ -49,6 +49,17 @@ class TestDatabase(unittest.TestCase):
         expect = [("file.nc", "temperature")]
         self.assertEqual(expect, result)
 
+    def test_insert_variable_unique_constraint(self):
+        """should only insert unique (file_id, variable) pairs"""
+        path = "file.nc"
+        variable = "temperature"
+        self.database.insert_variable(path, variable)
+        self.database.insert_variable(path, variable)
+        self.cursor.execute("SELECT * FROM variable")
+        result = self.cursor.fetchall()
+        expect = [(1, variable, 1)]
+        self.assertEqual(expect, result)
+
     def test_insert_pressure(self):
         path = "some.nc"
         variable = "relative_humidity"
