@@ -81,7 +81,7 @@ class Database(object):
     def insert_pressure(self, path, variable, pressure, i):
         self.insert_variable(path, variable)
         self.cursor.execute("""
-            INSERT INTO pressure (i, value) VALUES (:i,:pressure)
+            INSERT OR IGNORE INTO pressure (i, value) VALUES (:i,:pressure)
         """, dict(i=i, pressure=pressure))
         self.cursor.execute("""
             INSERT INTO variable_to_pressure (variable_id, pressure_id)
@@ -107,7 +107,7 @@ class Database(object):
     def insert_time(self, path, variable, time, i):
         self.insert_variable(path, variable)
         self.cursor.execute("""
-            INSERT INTO time (i, value) VALUES (:i,:value)
+            INSERT OR IGNORE INTO time (i, value) VALUES (:i,:value)
         """, dict(i=i, value=time))
         self.cursor.execute("""
             INSERT INTO variable_to_time (variable_id, time_id)

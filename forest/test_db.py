@@ -9,6 +9,8 @@ class TestDatabase(unittest.TestCase):
         self.connection = sqlite3.connect(":memory:")
         self.cursor = self.connection.cursor()
         self.database = db.Database(self.connection)
+        self.path = "file.nc"
+        self.variable = "temperature"
 
     def tearDown(self):
         self.connection.commit()
@@ -38,9 +40,7 @@ class TestDatabase(unittest.TestCase):
         self.assertEqual(expect, result)
 
     def test_insert_variable(self):
-        path = "file.nc"
-        variable = "temperature"
-        self.database.insert_variable(path, variable)
+        self.database.insert_variable(self.path, self.variable)
         self.cursor.execute("""
             SELECT file.name, variable.name FROM file
               JOIN variable ON file.id = variable.file_id
@@ -50,14 +50,31 @@ class TestDatabase(unittest.TestCase):
         self.assertEqual(expect, result)
 
     def test_insert_variable_unique_constraint(self):
-        """should only insert unique (file_id, variable) pairs"""
-        path = "file.nc"
-        variable = "temperature"
-        self.database.insert_variable(path, variable)
-        self.database.insert_variable(path, variable)
+        self.database.insert_variable(self.path, self.variable)
+        self.database.insert_variable(self.path, self.variable)
         self.cursor.execute("SELECT * FROM variable")
         result = self.cursor.fetchall()
-        expect = [(1, variable, 1)]
+        expect = [(1, self.variable, 1)]
+        self.assertEqual(expect, result)
+
+    def test_insert_time_unique_constraint(self):
+        time = dt.datetime(2019, 1, 1)
+        i = 0
+        self.database.insert_time(self.path, self.variable, time, i)
+        self.database.insert_time(self.path, self.variable, time, i)
+        self.cursor.execute("SELECT id, i, value FROM time")
+        result = self.cursor.fetchall()
+        expect = [(1, i, str(time))]
+        self.assertEqual(expect, result)
+
+    def test_insert_pressure_unique_constraint(self):
+        pressure = 1000.001
+        i = 0
+        self.database.insert_pressure(self.path, self.variable, pressure, i)
+        self.database.insert_pressure(self.path, self.variable, pressure, i)
+        self.cursor.execute("SELECT id, i, value FROM pressure")
+        result = self.cursor.fetchall()
+        expect = [(1, i, pressure)]
         self.assertEqual(expect, result)
 
     def test_insert_pressure(self):
