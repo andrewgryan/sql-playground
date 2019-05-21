@@ -19,6 +19,8 @@ class Database(object):
             CREATE TABLE IF NOT EXISTS variable (
                     id INTEGER PRIMARY KEY,
                     name TEXT,
+                    time_axis INTEGER,
+                    pressure_axis INTEGER,
                     file_id INTEGER,
                     FOREIGN KEY(file_id) REFERENCES file(id),
                     UNIQUE(name, file_id))
@@ -80,7 +82,13 @@ class Database(object):
         cubes = iris.load(path)
         for cube in cubes:
             variable = cube.var_name
-            self.insert_variable(path, variable)
+            time_axis = self._axis(cube, 'time')
+            pressure_axis = self._axis(cube, 'pressure')
+            self.insert_variable(
+                path,
+                variable,
+                time_axis=time_axis,
+                pressure_axis=pressure_axis)
             try:
                 times = [cell.point for cell in cube.coord('time').cells()]
                 self.insert_times(path, variable, times)
@@ -92,24 +100,35 @@ class Database(object):
             except iris.exceptions.CoordinateNotFoundError:
                 pass
 
+    @staticmethod
+    def _axis(cube, coord):
+        try:
+            dims = cube.coord_dims(coord)
+            if len(dims) == 0:
+                return None
+            else:
+                return dims[0]
+        except iris.exceptions.CoordinateNotFoundError:
+            return None
+
     def path_points(self, variable, initial, valid, pressure):
         """Criteria needed to load diagnostics"""
         pts = None
         self.cursor.execute("""
-            SELECT file.name, time.i, pressure.i
+            SELECT file.name, time.i, pressure.i, v.time_axis, v.pressure_axis
               FROM file
-              JOIN variable
-                ON file.id = variable.file_id
+              JOIN variable AS v
+                ON file.id = v.file_id
               JOIN variable_to_time AS vt
-                ON vt.variable_id = variable.id
+                ON vt.variable_id = v.id
               JOIN time
                 ON vt.time_id = time.id
               JOIN variable_to_pressure AS vp
-                ON vp.variable_id = variable.id
+                ON vp.variable_id = v.id
               JOIN pressure
                 ON vp.pressure_id = pressure.id
              WHERE file.reference = :initial
-               AND variable.name = :variable
+               AND v.name = :variable
                AND time.value = :valid
              ORDER BY ABS(pressure.value - :pressure)
         """, dict(
@@ -118,8 +137,12 @@ class Database(object):
             variable=variable,
             pressure=pressure))
         rows = self.cursor.fetchall()
-        path, ti, pi = rows[0]
-        pts = (ti, pi)
+        path, ti, pi, ta, pa = rows[0]
+        # Consider unit testing the logic below separately
+        if ta == pa:
+            pts = (ti,)
+        else:
+            pts = (ti, pi)
         return path, pts
 
     def insert_file_name(self, path, reference_time=None):
@@ -128,12 +151,26 @@ class Database(object):
             VALUES (:path, :reference)
         """, dict(path=path, reference=reference_time))
 
-    def insert_variable(self, path, variable):
+    def insert_variable(
+            self,
+            path,
+            variable,
+            time_axis=None,
+            pressure_axis=None):
         self.insert_file_name(path)
         self.cursor.execute("""
-            INSERT OR IGNORE INTO variable (name, file_id) VALUES (
-                :variable, (SELECT id FROM file WHERE name=:path))
-        """, dict(path=path, variable=variable))
+            INSERT OR IGNORE
+                        INTO variable (name, time_axis, pressure_axis, file_id)
+                      VALUES (
+                             :variable,
+                             :time_axis,
+                             :pressure_axis,
+                             (SELECT id FROM file WHERE name=:path))
+        """, dict(
+            path=path,
+            variable=variable,
+            time_axis=time_axis,
+            pressure_axis=pressure_axis))
 
     def insert_pressures(self, path, variable, values):
         """Helper method to insert a coordinate related to a variable"""

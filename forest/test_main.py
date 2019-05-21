@@ -126,3 +126,29 @@ class TestMain(unittest.TestCase):
         result = cursor.fetchall()
         expect = [(str(reference_time),)]
         self.assertEqual(expect, result)
+
+    def test_main_saves_axis_information(self):
+        times = [dt.datetime(2019, 1, 1), dt.datetime(2019, 1, 1)]
+        pressures = [1000, 900]
+        with netCDF4.Dataset(self.netcdf_file, "w") as dataset:
+            dataset.createDimension("dim0", len(times))
+            obj = dataset.createVariable("time", "d", ("dim0",))
+            obj.units = self.units
+            obj[:] = netCDF4.date2num(times, self.units)
+            obj = dataset.createVariable("pressure", "d", ("dim0",))
+            obj[:] = pressures
+            obj = dataset.createVariable("air_temperature", "f", ("dim0",))
+            obj.um_stash_source = "m01s16i203"
+            obj.coordinates = "time pressure"
+
+        main.main([
+            "--database", self.database_file,
+            self.netcdf_file
+        ])
+
+        connection = sqlite3.connect(self.database_file)
+        cursor = connection.cursor()
+        cursor.execute("SELECT v.time_axis, v.pressure_axis FROM variable AS v")
+        result = cursor.fetchall()
+        expect = [(0, 0)]
+        self.assertEqual(expect, result)

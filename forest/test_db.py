@@ -52,9 +52,9 @@ class TestDatabase(unittest.TestCase):
     def test_insert_variable_unique_constraint(self):
         self.database.insert_variable(self.path, self.variable)
         self.database.insert_variable(self.path, self.variable)
-        self.cursor.execute("SELECT * FROM variable")
+        self.cursor.execute("SELECT v.name, v.file_id FROM variable AS v")
         result = self.cursor.fetchall()
-        expect = [(1, self.variable, 1)]
+        expect = [(self.variable, 1)]
         self.assertEqual(expect, result)
 
     def test_insert_time_unique_constraint(self):
@@ -157,12 +157,16 @@ class TestDatabase(unittest.TestCase):
         expect = [(1, 1)]
         self.assertEqual(expect, result)
 
+    def test_insert_time_axis_into_variable(self):
+        self.database.insert_variable(self.path, self.variable, time_axis=1)
+        self.cursor.execute("SELECT time_axis FROM variable")
+        result = self.cursor.fetchall()
+        expect = [(1,)]
+        self.assertEqual(expect, result)
 
-    class DatabaseQueries(unittest.TestCase):
-        def test_find_all_variables(self):
-            connection = sqlite3.connect(':memory:')
-            cursor = connection.cursor()
-            cursor.execute("SELECT DISTINCT name FROM variable")
-            result = cursor.fetchall()
-            expect = []
-            self.assertEqual(expect, result)
+    def test_insert_pressure_axis_into_variable(self):
+        self.database.insert_variable(self.path, self.variable, pressure_axis=0)
+        self.cursor.execute("SELECT pressure_axis FROM variable")
+        result = self.cursor.fetchall()
+        expect = [(0,)]
+        self.assertEqual(expect, result)

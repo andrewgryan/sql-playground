@@ -1,5 +1,6 @@
 import unittest
 import os
+import iris
 import netCDF4
 import datetime as dt
 import database as db
@@ -25,6 +26,46 @@ class TestToDatetime(unittest.TestCase):
             [dt.datetime(2019, 1, 1, 14)]
         ]
         self.assertEqual(expect, result)
+
+
+class TestInsertNetCDF(unittest.TestCase):
+    def setUp(self):
+        self.path = "test-insert-netcdf.nc"
+        self.define(self.path)
+
+    def tearDown(self):
+        if os.path.exists(self.path):
+            os.remove(self.path)
+
+    def test_insert_netcdf_given_empty_dim_coords(self):
+        database = db.Database.connect(":memory:")
+        database.insert_netcdf(self.path)
+        database.cursor.execute("SELECT time_axis FROM variable")
+        result = database.cursor.fetchall()
+        expect = [(None,)]
+        self.assertEqual(expect, result)
+
+    def test_iris_load_empty_dim_coords(self):
+        cubes = iris.load(self.path)
+        cube = cubes[0]
+        result = cube.coord_dims('time')
+        expect = ()
+        self.assertEqual(expect, result)
+
+    def define(self, path):
+        units = "hours since 1970-01-01 00:00:00"
+        with netCDF4.Dataset(path, "w") as dataset:
+            dataset.createDimension("x", 2)
+            dataset.createDimension("y", 2)
+            obj = dataset.createVariable("time", "d", ())
+            obj[:] = netCDF4.date2num(dt.datetime(2019, 1, 1), units=units)
+            obj = dataset.createVariable("x", "f", ("x",))
+            obj[:] = [0, 10]
+            obj = dataset.createVariable("y", "f", ("y",))
+            obj[:] = [0, 10]
+            obj = dataset.createVariable("air_temperature", "f", ("y", "x"))
+            obj.um_stash_source = "m01s16i203"
+            obj.coordinates = "time"
 
 
 class TestAPI(unittest.TestCase):
