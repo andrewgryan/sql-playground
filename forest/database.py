@@ -1,4 +1,6 @@
 import sqlite3
+import iris
+import netCDF4
 
 
 class Database(object):
@@ -63,6 +65,56 @@ class Database(object):
     def close(self):
         self.connection.commit()
         self.connection.close()
+
+    def insert_netcdf(self, path):
+        """Coordinate and meta-data information taken from NetCDF file"""
+        with netCDF4.Dataset(path) as dataset:
+            try:
+                obj = dataset.variables["forecast_reference_time"]
+                reference_time = netCDF4.num2date(obj[:], units=obj.units)
+            except KeyError:
+                reference_time = None
+
+        self.insert_file_name(path, reference_time=reference_time)
+
+        cubes = iris.load(path)
+        for cube in cubes:
+            variable = cube.var_name
+            self.insert_variable(path, variable)
+            try:
+                times = [cell.point for cell in cube.coord('time').cells()]
+                self.insert_times(path, variable, times)
+            except iris.exceptions.CoordinateNotFoundError:
+                pass
+            try:
+                pressures = [cell.point for cell in cube.coord('pressure').cells()]
+                self.insert_pressures(path, variable, pressures)
+            except iris.exceptions.CoordinateNotFoundError:
+                pass
+
+    def path_points(self, variable, initial, valid, pressure):
+        """Criteria needed to load diagnostics"""
+        pts = None
+        self.cursor.execute("""
+            SELECT file.name, time.i
+              FROM file
+              JOIN variable
+                ON file.id = variable.file_id
+              JOIN variable_to_time AS vt
+                ON vt.variable_id = variable.id
+              JOIN time
+                ON vt.time_id = time.id
+             WHERE file.reference = :initial
+               AND variable.name = :variable
+               AND time.value = :valid
+        """, dict(
+            initial=initial,
+            valid=valid,
+            variable=variable))
+        rows = self.cursor.fetchall()
+        path, i = rows[0]
+        pts = (i,)
+        return path, pts
 
     def insert_file_name(self, path, reference_time=None):
         self.cursor.execute("""
