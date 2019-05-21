@@ -10,6 +10,7 @@ class Database(object):
             CREATE TABLE IF NOT EXISTS file (
                     id INTEGER PRIMARY KEY,
                     name TEXT NOT NULL,
+                    reference TEXT,
                     UNIQUE(name))
         """)
         self.cursor.execute("""
@@ -61,10 +62,11 @@ class Database(object):
         self.connection.commit()
         self.connection.close()
 
-    def insert_file_name(self, path):
-        self.cursor.execute(
-            "INSERT OR IGNORE INTO file (name) VALUES (:path)",
-            dict(path=path))
+    def insert_file_name(self, path, reference_time=None):
+        self.cursor.execute("""
+            INSERT OR IGNORE INTO file (name, reference)
+            VALUES (:path, :reference)
+        """, dict(path=path, reference=reference_time))
 
     def insert_variable(self, path, variable):
         self.insert_file_name(path)

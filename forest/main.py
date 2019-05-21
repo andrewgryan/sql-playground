@@ -2,6 +2,7 @@
 import argparse
 import database as db
 import iris
+import netCDF4
 
 
 def parse_args(argv=None):
@@ -19,7 +20,16 @@ def main(argv=None):
     args = parse_args(argv=argv)
     with db.Database.connect(args.database) as database:
         for path in args.paths:
-            database.insert_file_name(path)
+            print("reading: {}".format(path))
+            with netCDF4.Dataset(path) as dataset:
+                try:
+                    obj = dataset.variables["forecast_reference_time"]
+                    reference_time = netCDF4.num2date(obj[:], units=obj.units)
+                except KeyError:
+                    reference_time = None
+
+            database.insert_file_name(path, reference_time=reference_time)
+
             cubes = iris.load(path)
             for cube in cubes:
                 variable = cube.var_name

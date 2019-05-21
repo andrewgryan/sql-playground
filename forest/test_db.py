@@ -125,3 +125,12 @@ class TestDatabase(unittest.TestCase):
         result = self.database.fetch_dates(pattern="a*.nc")
         expect = ["2018-01-01T00:00:00", "2018-01-01T01:00:00"]
         self.assertEqual(expect, result)
+
+    def test_insert_reference_time(self):
+        reference_time = dt.datetime(2019, 1, 1, 12)
+        self.database.insert_file_name(self.path, reference_time=reference_time)
+
+        self.cursor.execute("SELECT reference FROM file")
+        result = self.cursor.fetchall()
+        expect = [(str(reference_time),)]
+        self.assertEqual(expect, result)

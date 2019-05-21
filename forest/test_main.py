@@ -8,6 +8,7 @@ import main
 
 class TestMain(unittest.TestCase):
     def setUp(self):
+        self.units = "hours since 1970-01-01 00:00:00"
         self.database_file = "test_main.db"
         self.netcdf_file = "test_file.nc"
         self._paths = [
@@ -59,7 +60,6 @@ class TestMain(unittest.TestCase):
         self.assertEqual(expect, result)
 
     def test_main_saves_times_in_database(self):
-        units = "hours since 1970-01-01 00:00:00"
         times = [
             dt.datetime(2019, 1, 1, 12),
             dt.datetime(2019, 1, 1, 13)]
@@ -67,8 +67,8 @@ class TestMain(unittest.TestCase):
         with netCDF4.Dataset(self.netcdf_file, "w") as dataset:
             dataset.createDimension("time", len(times))
             obj = dataset.createVariable("time", "d", ("time",))
-            obj.units = units
-            obj[:] = netCDF4.date2num(times, units)
+            obj.units = self.units
+            obj[:] = netCDF4.date2num(times, self.units)
             obj = dataset.createVariable("air_temperature", "f", ("time",))
             obj.um_stash_source = "m01s16i203"
 
@@ -105,4 +105,24 @@ class TestMain(unittest.TestCase):
         cursor.execute("SELECT DISTINCT value FROM pressure")
         result = cursor.fetchall()
         expect = [(p,) for p in pressures]
+        self.assertEqual(expect, result)
+
+    def test_main_saves_reference_time(self):
+        reference_time = dt.datetime(2019, 1, 1)
+
+        with netCDF4.Dataset(self.netcdf_file, "w") as dataset:
+            obj = dataset.createVariable("forecast_reference_time", "d", ())
+            obj[:] = netCDF4.date2num(reference_time, self.units)
+            obj.units = self.units
+
+        main.main([
+            "--database", self.database_file,
+            self.netcdf_file
+        ])
+
+        connection = sqlite3.connect(self.database_file)
+        cursor = connection.cursor()
+        cursor.execute("SELECT reference FROM file")
+        result = cursor.fetchall()
+        expect = [(str(reference_time),)]
         self.assertEqual(expect, result)
