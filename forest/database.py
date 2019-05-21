@@ -96,7 +96,7 @@ class Database(object):
         """Criteria needed to load diagnostics"""
         pts = None
         self.cursor.execute("""
-            SELECT file.name, time.i
+            SELECT file.name, time.i, pressure.i
               FROM file
               JOIN variable
                 ON file.id = variable.file_id
@@ -104,16 +104,22 @@ class Database(object):
                 ON vt.variable_id = variable.id
               JOIN time
                 ON vt.time_id = time.id
+              JOIN variable_to_pressure AS vp
+                ON vp.variable_id = variable.id
+              JOIN pressure
+                ON vp.pressure_id = pressure.id
              WHERE file.reference = :initial
                AND variable.name = :variable
                AND time.value = :valid
+             ORDER BY ABS(pressure.value - :pressure)
         """, dict(
             initial=initial,
             valid=valid,
-            variable=variable))
+            variable=variable,
+            pressure=pressure))
         rows = self.cursor.fetchall()
-        path, i = rows[0]
-        pts = (i,)
+        path, ti, pi = rows[0]
+        pts = (ti, pi)
         return path, pts
 
     def insert_file_name(self, path, reference_time=None):
