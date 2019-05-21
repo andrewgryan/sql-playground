@@ -170,3 +170,24 @@ class TestDatabase(unittest.TestCase):
         result = self.cursor.fetchall()
         expect = [(0,)]
         self.assertEqual(expect, result)
+
+    def test_initial_times_given_empty_database_returns_empty_list(self):
+        result = self.database.initial_times()
+        expect = []
+        self.assertEqual(expect, result)
+
+    def test_initial_times_given_duplicates_returns_unique_values(self):
+        time = dt.datetime(2019, 1, 1)
+        self.database.insert_file_name("a.nc", time)
+        self.database.insert_file_name("b.nc", time)
+        result = self.database.initial_times()
+        expect = ["2019-01-01 00:00:00"]
+        self.assertEqual(expect, result)
+
+    def test_files(self):
+        self.database.insert_file_name("a.nc")
+        self.database.insert_file_name("b.nc")
+        self.database.insert_file_name("a.nc")
+        result = self.database.files()
+        expect = ["a.nc", "b.nc"]
+        self.assertEqual(expect, result)

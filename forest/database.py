@@ -111,6 +111,18 @@ class Database(object):
         except iris.exceptions.CoordinateNotFoundError:
             return None
 
+    def initial_times(self):
+        """Distinct initialisation times"""
+        self.cursor.execute("SELECT DISTINCT reference FROM file ORDER BY reference;")
+        rows = self.cursor.fetchall()
+        return [r for r, in rows]
+
+    def files(self):
+        """File names"""
+        self.cursor.execute("SELECT name FROM file ORDER BY name;")
+        rows = self.cursor.fetchall()
+        return [r for r, in rows]
+
     def path_points(self, variable, initial, valid, pressure):
         """Criteria needed to load diagnostics"""
         pts = None
