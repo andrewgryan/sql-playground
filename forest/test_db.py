@@ -88,21 +88,19 @@ class TestDatabase(unittest.TestCase):
         self.assertEqual(expect, result)
 
     def test_insert_time_distinguishes_paths(self):
-        variable = "temperature"
-        self.database.insert_time("a.nc", variable, "2018-01-01T00:00:00", 6)
-        self.database.insert_time("b.nc", variable, "2018-01-01T01:00:00", 7)
-        result = self.database.find_time(variable, "2018-01-01T01:00:00")
+        self.database.insert_time("a.nc", self.variable, "2018-01-01T00:00:00", 6)
+        self.database.insert_time("b.nc", self.variable, "2018-01-01T01:00:00", 7)
+        result = self.database.find_time(self.variable, "2018-01-01T01:00:00")
         expect = [("b.nc", 7)]
         self.assertEqual(expect, result)
 
     def test_insert_pressure_distinguishes_paths(self):
-        variable = "temperature"
         pressure = [1000.0001, 950.0001]
         index = [5, 14]
         path = ["a.nc", "b.nc"]
-        self.database.insert_pressure(path[0], variable, pressure[0], index[0])
-        self.database.insert_pressure(path[1], variable, pressure[1], index[1])
-        result = self.database.find_pressure(variable, pressure[1])
+        self.database.insert_pressure(path[0], self.variable, pressure[0], index[0])
+        self.database.insert_pressure(path[1], self.variable, pressure[1], index[1])
+        result = self.database.find_pressure(self.variable, pressure[1])
         expect = [(path[1], index[1])]
         self.assertEqual(expect, result)
 
@@ -134,3 +132,37 @@ class TestDatabase(unittest.TestCase):
         result = self.cursor.fetchall()
         expect = [(str(reference_time),)]
         self.assertEqual(expect, result)
+
+    def test_variable_to_pressure_junction_table_should_be_unique(self):
+        pressure = 1000.001
+        i = 5
+
+        self.database.insert_pressure(self.path, self.variable, pressure, i)
+        self.database.insert_pressure(self.path, self.variable, pressure, i)
+
+        self.cursor.execute("SELECT variable_id,pressure_id FROM variable_to_pressure")
+        result = self.cursor.fetchall()
+        expect = [(1, 1)]
+        self.assertEqual(expect, result)
+
+    def test_variable_to_time_junction_table_should_be_unique(self):
+        time = dt.datetime(2019, 1, 1)
+        i = 5
+
+        self.database.insert_time(self.path, self.variable, time, i)
+        self.database.insert_time(self.path, self.variable, time, i)
+
+        self.cursor.execute("SELECT variable_id,time_id FROM variable_to_time")
+        result = self.cursor.fetchall()
+        expect = [(1, 1)]
+        self.assertEqual(expect, result)
+
+
+    class DatabaseQueries(unittest.TestCase):
+        def test_find_all_variables(self):
+            connection = sqlite3.connect(':memory:')
+            cursor = connection.cursor()
+            cursor.execute("SELECT DISTINCT name FROM variable")
+            result = cursor.fetchall()
+            expect = []
+            self.assertEqual(expect, result)

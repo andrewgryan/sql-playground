@@ -32,7 +32,8 @@ class Database(object):
         self.cursor.execute("""
             CREATE TABLE IF NOT EXISTS variable_to_pressure (
                     variable_id INTEGER,
-                    pressure_id INTEGER)
+                    pressure_id INTEGER,
+                    PRIMARY KEY(variable_id, pressure_id))
         """)
         self.cursor.execute("""
             CREATE TABLE IF NOT EXISTS time (
@@ -44,7 +45,8 @@ class Database(object):
         self.cursor.execute("""
             CREATE TABLE IF NOT EXISTS variable_to_time (
                     variable_id INTEGER,
-                    time_id INTEGER)
+                    time_id INTEGER,
+                    PRIMARY KEY(variable_id, time_id))
         """)
 
     @classmethod
@@ -86,7 +88,7 @@ class Database(object):
             INSERT OR IGNORE INTO pressure (i, value) VALUES (:i,:pressure)
         """, dict(i=i, pressure=pressure))
         self.cursor.execute("""
-            INSERT INTO variable_to_pressure (variable_id, pressure_id)
+            INSERT OR IGNORE INTO variable_to_pressure (variable_id, pressure_id)
             VALUES(
                 (SELECT variable.id FROM variable
                    JOIN file ON variable.file_id = file.id
@@ -112,7 +114,7 @@ class Database(object):
             INSERT OR IGNORE INTO time (i, value) VALUES (:i,:value)
         """, dict(i=i, value=time))
         self.cursor.execute("""
-            INSERT INTO variable_to_time (variable_id, time_id)
+            INSERT OR IGNORE INTO variable_to_time (variable_id, time_id)
             VALUES(
                 (SELECT variable.id FROM variable
                    JOIN file ON variable.file_id = file.id
