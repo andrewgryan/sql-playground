@@ -163,6 +163,51 @@ class TestDatabase(unittest.TestCase):
         expect = ["2019-01-01 02:00:00"]
         self.assertEqual(expect, result)
 
+    def test_valid_times_given_initial_time(self):
+        data = [
+            ("a.nc", "2019-01-01 00:00:00", [
+                "2019-01-01 03:00:00",
+                "2019-01-01 06:00:00"]),
+            ("b.nc", "2019-01-01 12:00:00", [
+                "2019-01-01 12:00:00",
+                "2019-01-01 15:00:00",
+                "2019-01-01 18:00:00"])
+        ]
+        for path, initial, times in data:
+            self.database.insert_file_name(path, initial)
+            for i, time in enumerate(times):
+                self.database.insert_time(path, self.variable, time, i)
+        result = self.database.valid_times(initial="2019-01-01 00:00:00")
+        expect = [
+            "2019-01-01 03:00:00",
+            "2019-01-01 06:00:00"]
+        self.assertEqual(expect, result)
+
+    def test_valid_times_given_initial_time_and_variable(self):
+        data = [
+            ("a.nc", "2019-01-01 00:00:00", [
+                ("x", "2019-01-01 03:00:00"),
+                ("y", "2019-01-01 06:00:00")]),
+            ("b.nc", "2019-01-01 00:00:00", [
+                ("x", "2019-01-01 06:00:00"),
+                ("y", "2019-01-01 09:00:00")]),
+            ("c.nc", "2019-01-01 12:00:00", [
+                ("x", "2019-01-01 12:00:00"),
+                ("y", "2019-01-01 15:00:00"),
+                ("z", "2019-01-01 18:00:00")])
+        ]
+        for path, initial, items in data:
+            self.database.insert_file_name(path, initial)
+            for i, (variable, time) in enumerate(items):
+                self.database.insert_time(path, variable, time, i)
+        result = self.database.valid_times(
+            variable="y",
+            initial="2019-01-01 00:00:00")
+        expect = [
+            "2019-01-01 06:00:00",
+            "2019-01-01 09:00:00"]
+        self.assertEqual(expect, result)
+
     def test_find_all_available_dates(self):
         self.cursor.executemany("""
             INSERT INTO time (i, value) VALUES(:i, :value)
@@ -222,6 +267,12 @@ class TestDatabase(unittest.TestCase):
         self.assertEqual(expect, result)
 
     def test_initial_times_given_empty_database_returns_empty_list(self):
+        result = self.database.initial_times()
+        expect = []
+        self.assertEqual(expect, result)
+
+    def test_initial_times_removes_null_values(self):
+        self.database.insert_file_name("file.nc", None)
         result = self.database.initial_times()
         expect = []
         self.assertEqual(expect, result)

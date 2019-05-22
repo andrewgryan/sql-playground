@@ -118,13 +118,15 @@ class Database(object):
             query = """
                 SELECT DISTINCT reference
                   FROM file
-                 ORDER BY reference;
+                 WHERE reference IS NOT NULL
+                 ORDER BY reference
             """
         else:
             query = """
                 SELECT DISTINCT reference
                   FROM file
-                 WHERE name GLOB :pattern
+                 WHERE reference IS NOT NULL
+                   AND name GLOB :pattern
                  ORDER BY reference;
             """
         self.cursor.execute(query, dict(pattern=pattern))
@@ -240,51 +242,44 @@ class Database(object):
                 (SELECT id FROM pressure WHERE value=:pressure AND i=:i))
         """, dict(path=path, variable=variable, pressure=pressure, i=i))
 
-    def valid_times(self, variable=None, pattern=None):
+    def valid_times(self,
+                    variable=None,
+                    pattern=None,
+                    initial=None):
         """Valid times associated with search criteria"""
-        if (variable is not None) and (pattern is not None):
-            query = """
-                SELECT value
-                  FROM time
-                  JOIN variable_to_time AS vt
-                    ON vt.time_id = time.id
-                  JOIN variable AS v
-                    ON vt.variable_id = v.id
-                  JOIN file
-                    ON v.file_id = file.id
-                 WHERE file.name GLOB :pattern
-                   AND v.name = :variable
-            """
-        elif variable is not None:
-            query = """
-                SELECT value
-                  FROM time
-                  JOIN variable_to_time AS vt
-                    ON vt.time_id = time.id
-                  JOIN variable AS v
-                    ON vt.variable_id = v.id
-                 WHERE v.name = :variable
-            """
-        elif pattern is not None:
-            query = """
-                SELECT value
-                  FROM time
-                  JOIN variable_to_time AS vt
-                    ON vt.time_id = time.id
-                  JOIN variable AS v
-                    ON vt.variable_id = v.id
-                  JOIN file
-                    ON v.file_id = file.id
-                 WHERE file.name GLOB :pattern
-            """
-        else:
-            query = """
-                SELECT value
-                  FROM time
-            """
+        # Note: SQL injection possible if not properly escaped
+        #       use ? and :name syntax in template
+        environment = jinja2.Environment(extensions=['jinja2.ext.do'])
+        query = environment.from_string("""
+            {% set EQNS = [] %}
+            {% if initial is not none %}
+               {% do EQNS.append('file.reference = :initial') %}
+            {% endif %}
+            {% if pattern is not none %}
+               {% do EQNS.append('file.name GLOB :pattern') %}
+            {% endif %}
+            {% if variable is not none %}
+               {% do EQNS.append('v.name = :variable') %}
+            {% endif %}
+            SELECT time.value
+              FROM time
+             {% if EQNS %}
+              JOIN variable_to_time AS vt
+                ON vt.time_id = time.id
+              JOIN variable AS v
+                ON vt.variable_id = v.id
+              JOIN file
+                ON v.file_id = file.id
+             WHERE {{ EQNS | join(' AND ') }}
+             {% endif %}
+        """).render(
+            initial=initial,
+            variable=variable,
+            pattern=pattern)
         self.cursor.execute(query, dict(
             variable=variable,
-            pattern=pattern))
+            pattern=pattern,
+            initial=initial))
         rows = self.cursor.fetchall()
         return [time for time, in rows]
 
