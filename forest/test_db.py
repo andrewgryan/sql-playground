@@ -307,5 +307,5 @@ class TestDatabase(unittest.TestCase):
                 ("file_2.nc", "var_b", 700, 0)]:
             self.database.insert_pressure(path, variable, pressure, i)
         result = self.database.pressures(variable="var_a", pattern="*_0.nc")
-        expect = [1000, 950]
+        expect = [950., 1000.]
         self.assertEqual(expect, result)
