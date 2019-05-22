@@ -264,3 +264,48 @@ class TestDatabase(unittest.TestCase):
         result = self.database.variables()
         expect = ["var_0", "var_1", "var_2"]
         self.assertEqual(expect, result)
+
+    def test_pressures(self):
+        for (path, variable, pressure, i) in [
+                ("file_0.nc", "var_a", 1000, 0),
+                ("file_0.nc", "var_a", 950, 1),
+                ("file_1.nc", "var_b", 1000, 0),
+                ("file_2.nc", "var_b", 1000, 0)]:
+            self.database.insert_pressure(path, variable, pressure, i)
+        result = self.database.pressures()
+        expect = [950, 1000]
+        self.assertEqual(expect, result)
+
+    def test_pressures_related_to_variable(self):
+        for (path, variable, pressure, i) in [
+                ("file_0.nc", "var_a", 1000, 0),
+                ("file_0.nc", "var_a", 950, 1),
+                ("file_1.nc", "var_b", 800, 0),
+                ("file_2.nc", "var_b", 700, 0)]:
+            self.database.insert_pressure(path, variable, pressure, i)
+        result = self.database.pressures(variable="var_b")
+        expect = [700, 800]
+        self.assertEqual(expect, result)
+
+    def test_pressures_related_to_pattern(self):
+        for (path, variable, pressure, i) in [
+                ("file_0.nc", "var_a", 1000, 0),
+                ("file_0.nc", "var_a", 950, 1),
+                ("file_1.nc", "var_b", 800, 0),
+                ("file_2.nc", "var_b", 700, 0)]:
+            self.database.insert_pressure(path, variable, pressure, i)
+        result = self.database.pressures(pattern="*_2.nc")
+        expect = [700]
+        self.assertEqual(expect, result)
+
+    def test_pressures_related_to_pattern_and_variable(self):
+        for (path, variable, pressure, i) in [
+                ("file_0.nc", "var_a", 1000, 0),
+                ("file_0.nc", "var_a", 950, 1),
+                ("file_0.nc", "var_b", 750, 0),
+                ("file_1.nc", "var_b", 800, 0),
+                ("file_2.nc", "var_b", 700, 0)]:
+            self.database.insert_pressure(path, variable, pressure, i)
+        result = self.database.pressures(variable="var_a", pattern="*_0.nc")
+        expect = [1000, 950]
+        self.assertEqual(expect, result)
