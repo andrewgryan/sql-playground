@@ -113,6 +113,56 @@ class TestDatabase(unittest.TestCase):
         expect = ["2019-01-01 12:00:00", "2019-01-01 13:00:00"]
         self.assertEqual(expect, result)
 
+    def test_valid_times_returns_all_valid_times(self):
+        for (path, variable, time, i) in [
+                ("file_0.nc", "var_a", "2019-01-01 00:00:00", 0),
+                ("file_1.nc", "var_a", "2019-01-01 01:00:00", 0),
+                ("file_1.nc", "var_b", "2019-01-01 02:00:00", 0),
+                ("file_2.nc", "var_b", "2019-01-01 03:00:00", 0)]:
+            self.database.insert_time(path, variable, time, i)
+        result = self.database.valid_times()
+        expect = [
+            "2019-01-01 00:00:00",
+            "2019-01-01 01:00:00",
+            "2019-01-01 02:00:00",
+            "2019-01-01 03:00:00"]
+        self.assertEqual(expect, result)
+
+    def test_valid_times_supports_variable_filtering(self):
+        for (path, variable, time, i) in [
+                ("file_0.nc", "var_a", "2019-01-01 00:00:00", 0),
+                ("file_1.nc", "var_a", "2019-01-01 01:00:00", 0),
+                ("file_1.nc", "var_b", "2019-01-01 02:00:00", 0),
+                ("file_2.nc", "var_b", "2019-01-01 03:00:00", 0)]:
+            self.database.insert_time(path, variable, time, i)
+        result = self.database.valid_times(variable="var_b")
+        expect = ["2019-01-01 02:00:00", "2019-01-01 03:00:00"]
+        self.assertEqual(expect, result)
+
+    def test_valid_times_supports_glob_pattern(self):
+        for (path, time, i) in [
+                ("file_0.nc", "2019-01-01 00:00:00", 0),
+                ("file_1.nc", "2019-01-01 01:00:00", 0),
+                ("file_1.nc", "2019-01-01 02:00:00", 0),
+                ("file_2.nc", "2019-01-01 03:00:00", 0)]:
+            self.database.insert_time(path, self.variable, time, i)
+        result = self.database.valid_times(pattern="*_1.nc")
+        expect = ["2019-01-01 01:00:00", "2019-01-01 02:00:00"]
+        self.assertEqual(expect, result)
+
+    def test_valid_times_given_variable_and_pattern(self):
+        for (path, variable, time, i) in [
+                ("file_0.nc", "var_a", "2019-01-01 00:00:00", 0),
+                ("file_1.nc", "var_a", "2019-01-01 01:00:00", 0),
+                ("file_1.nc", "var_b", "2019-01-01 02:00:00", 0),
+                ("file_2.nc", "var_b", "2019-01-01 03:00:00", 0)]:
+            self.database.insert_time(path, variable, time, i)
+        result = self.database.valid_times(
+            pattern="*_1.nc",
+            variable="var_b")
+        expect = ["2019-01-01 02:00:00"]
+        self.assertEqual(expect, result)
+
     def test_find_all_available_dates(self):
         self.cursor.executemany("""
             INSERT INTO time (i, value) VALUES(:i, :value)
@@ -184,10 +234,33 @@ class TestDatabase(unittest.TestCase):
         expect = ["2019-01-01 00:00:00"]
         self.assertEqual(expect, result)
 
+    def test_initial_times_supports_glob_pattern(self):
+        self.database.insert_file_name("file_0.nc", "2019-01-01 00:00:00")
+        self.database.insert_file_name("file_1.nc", "2019-01-02 00:00:00")
+        result = self.database.initial_times(pattern="*_0.nc")
+        expect = ["2019-01-01 00:00:00"]
+        self.assertEqual(expect, result)
+
     def test_files(self):
         self.database.insert_file_name("a.nc")
         self.database.insert_file_name("b.nc")
         self.database.insert_file_name("a.nc")
         result = self.database.files()
         expect = ["a.nc", "b.nc"]
+        self.assertEqual(expect, result)
+
+    def test_files_supports_glob_pattern(self):
+        self.database.insert_file_name("a.nc")
+        self.database.insert_file_name("b.nc")
+        self.database.insert_file_name("a.nc")
+        result = self.database.files(pattern="a.nc")
+        expect = ["a.nc"]
+        self.assertEqual(expect, result)
+
+    def test_variables(self):
+        self.database.insert_variable("a.nc", "var_0")
+        self.database.insert_variable("b.nc", "var_1",)
+        self.database.insert_variable("a.nc", "var_2")
+        result = self.database.variables()
+        expect = ["var_0", "var_1", "var_2"]
         self.assertEqual(expect, result)

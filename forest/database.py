@@ -111,15 +111,51 @@ class Database(object):
         except iris.exceptions.CoordinateNotFoundError:
             return None
 
-    def initial_times(self):
+    def initial_times(self, pattern=None):
         """Distinct initialisation times"""
-        self.cursor.execute("SELECT DISTINCT reference FROM file ORDER BY reference;")
+        if pattern is None:
+            query = """
+                SELECT DISTINCT reference
+                  FROM file
+                 ORDER BY reference;
+            """
+        else:
+            query = """
+                SELECT DISTINCT reference
+                  FROM file
+                 WHERE name GLOB :pattern
+                 ORDER BY reference;
+            """
+        self.cursor.execute(query, dict(pattern=pattern))
         rows = self.cursor.fetchall()
         return [r for r, in rows]
 
-    def files(self):
+    def files(self, pattern=None):
         """File names"""
-        self.cursor.execute("SELECT name FROM file ORDER BY name;")
+        if pattern is None:
+            query = """
+                SELECT name
+                  FROM file
+                 ORDER BY name;
+            """
+        else:
+            query = """
+                SELECT name
+                  FROM file
+                 WHERE name GLOB :pattern
+                 ORDER BY name;
+            """
+        self.cursor.execute(query, dict(pattern=pattern))
+        rows = self.cursor.fetchall()
+        return [r for r, in rows]
+
+    def variables(self):
+        query = """
+            SELECT DISTINCT name
+              FROM variable
+             ORDER BY name;
+        """
+        self.cursor.execute(query, dict())
         rows = self.cursor.fetchall()
         return [r for r, in rows]
 
@@ -202,6 +238,55 @@ class Database(object):
                   WHERE file.name = :path AND variable.name=:variable),
                 (SELECT id FROM pressure WHERE value=:pressure AND i=:i))
         """, dict(path=path, variable=variable, pressure=pressure, i=i))
+
+    def valid_times(self, variable=None, pattern=None):
+        """Valid times associated with search criteria"""
+        if (variable is not None) and (pattern is not None):
+            query = """
+                SELECT value
+                  FROM time
+                  JOIN variable_to_time AS vt
+                    ON vt.time_id = time.id
+                  JOIN variable AS v
+                    ON vt.variable_id = v.id
+                  JOIN file
+                    ON v.file_id = file.id
+                 WHERE file.name GLOB :pattern
+                   AND v.name = :variable
+            """
+        elif variable is not None:
+            query = """
+                SELECT value
+                  FROM time
+                  JOIN variable_to_time AS vt
+                    ON vt.time_id = time.id
+                  JOIN variable AS v
+                    ON vt.variable_id = v.id
+                 WHERE v.name = :variable
+            """
+        elif pattern is not None:
+            query = """
+                SELECT value
+                  FROM time
+                  JOIN variable_to_time AS vt
+                    ON vt.time_id = time.id
+                  JOIN variable AS v
+                    ON vt.variable_id = v.id
+                  JOIN file
+                    ON v.file_id = file.id
+                 WHERE file.name GLOB :pattern
+            """
+        else:
+            query = """
+                SELECT value
+                  FROM time
+            """
+        self.cursor.execute(query, dict(
+            variable=variable,
+            pattern=pattern))
+        rows = self.cursor.fetchall()
+        return [time for time, in rows]
+
 
     def fetch_times(self, path, variable):
         """Helper method to find times related to a variable"""
