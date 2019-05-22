@@ -19,9 +19,11 @@ def main():
     initial_times = [t for t in initial_times if t is not None]
 
     ui = UI(initial_times, date=initial_times[0])
-    variable_menu = Menu(database.variables())
+
     pressure_menu = Menu(database.pressures(),
                          formatter=lambda x: "{:.1f} hPa".format(x))
+    variable_menu = Menu(database.variables())
+    variable_menu.on_click(on_variable(database, pressure_menu))
     root = bokeh.layouts.column(
         bokeh.layouts.row(variable_menu.dropdown),
         bokeh.layouts.row(ui.minus, ui.div, ui.plus),
@@ -31,21 +33,37 @@ def main():
     document.add_root(root)
 
 
+def on_variable(database, pressure_menu):
+    def callback(value):
+        pressures = database.pressures(variable=value)
+        pressure_menu.options = pressures
+    return callback
+
+
 class Menu(object):
     def __init__(self, options, formatter=str):
-        self.options = options
-        self.dropdown = bokeh.models.Dropdown(
-            menu=[(formatter(o), formatter(o)) for o in options])
+        self.dropdown = bokeh.models.Dropdown()
         self.dropdown.on_click(self.on_label)
-        self.dropdown.on_click(self.on_click)
+        self.formatter = formatter
+        self.options = options
+
+    @property
+    def options(self):
+        return getattr(self, "_options", [])
+
+    @options.setter
+    def options(self, values):
+        self._options = values
+        self.dropdown.menu = [
+            (self.formatter(o), self.formatter(o)) for o in self._options]
 
     def on_label(self, value):
         for l, v in self.dropdown.menu:
             if v == value:
                 self.dropdown.label = l
 
-    def on_click(self, value):
-        print(value)
+    def on_click(self, callback):
+        self.dropdown.on_click(callback)
 
 
 class UI(object):
