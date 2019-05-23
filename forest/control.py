@@ -33,19 +33,38 @@ class Controls(Observable):
             variable=None)
         self.dropdowns = {
             "pattern": bokeh.models.Dropdown(
-                label="Datasets",
+                label="Model/observation",
                 menu=patterns),
-            "pressure": bokeh.models.Dropdown(label="Pressure"),
-            "initial_time": bokeh.models.Dropdown(label="Initial time")
+            "variable": bokeh.models.Dropdown(
+                label="Variable"),
+            "initial_time": bokeh.models.Dropdown(
+                label="Initial time"),
+            "valid_time": bokeh.models.Dropdown(
+                label="Valid time"),
+            "pressure": bokeh.models.Dropdown(
+                label="Pressure")
         }
         self.dropdowns["pattern"].on_click(self.on_pattern)
         for dropdown in self.dropdowns.values():
             util.autolabel(dropdown)
         self.layout = bokeh.layouts.column(
             self.dropdowns["pattern"],
-            self.dropdowns["pressure"],
-            self.dropdowns["initial_time"])
+            self.dropdowns["variable"],
+            self.dropdowns["initial_time"],
+            self.dropdowns["valid_time"],
+            self.dropdowns["pressure"])
+
         super().__init__()
+
+        # Connect state changes to render
+        self.subscribe(self.render)
+
+    def render(self, state):
+        """Configure dropdown menus"""
+        if state.pattern is None:
+            return
+        variables = self.database.variables(pattern=state.pattern)
+        self.dropdowns["variable"].menu = self.menu(variables)
 
     def on_pattern(self, pattern):
         """Select observation/model file pattern"""

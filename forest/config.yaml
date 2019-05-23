@@ -2,4 +2,4 @@ models:
         - name: Operational GA6
           pattern: '*global_africa*.nc'
         - name: Operational Tropical Africa
-          pattern: '*os42_eakm4p4*.nc'
+          pattern: '*os42_ea*.nc'

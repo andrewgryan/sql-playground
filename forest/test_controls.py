@@ -41,10 +41,11 @@ class TestControls(unittest.TestCase):
         self.assertEqual(expect, result)
 
     def test_observable(self):
+        state = control.State()
         callback = unittest.mock.Mock()
         self.controls.subscribe(callback)
-        self.controls.notify((1, 2, 3))
-        callback.assert_called_once_with((1, 2, 3))
+        self.controls.notify(state)
+        callback.assert_called_once_with(state)
 
     def test_on_variable_emits_state(self):
         callback = unittest.mock.Mock()
@@ -67,3 +68,14 @@ class TestControls(unittest.TestCase):
         self.controls.on_plus()
         expect = control.State(variable=None, initial=self.initial_times[1])
         callback.assert_called_once_with(expect)
+
+    def test_render_state_configures_variable_menu(self):
+        database = db.Database.connect(":memory:")
+        database.insert_variable("a.nc", "air_temperature")
+        database.insert_variable("b.nc", "mslp")
+        controls = control.Controls(database)
+        state = control.State(pattern="b.nc")
+        controls.render(state)
+        result = controls.dropdowns["variable"].menu
+        expect = [("mslp", "mslp")]
+        self.assertEqual(expect, result)

@@ -316,6 +316,14 @@ class TestDatabase(unittest.TestCase):
         expect = ["var_0", "var_1", "var_2"]
         self.assertEqual(expect, result)
 
+    def test_variables_given_pattern(self):
+        self.database.insert_variable("a.nc", "var_0")
+        self.database.insert_variable("b.nc", "var_1",)
+        self.database.insert_variable("a.nc", "var_2")
+        result = self.database.variables(pattern="a.nc")
+        expect = ["var_0", "var_2"]
+        self.assertEqual(expect, result)
+
     def test_pressures(self):
         for (path, variable, pressure, i) in [
                 ("file_0.nc", "var_a", 1000, 0),

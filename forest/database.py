@@ -152,13 +152,21 @@ class Database(object):
         rows = self.cursor.fetchall()
         return [r for r, in rows]
 
-    def variables(self):
-        query = """
-            SELECT DISTINCT name
+    def variables(self, pattern=None):
+        # Note: SQL injection possible if not properly escaped
+        #       use ? and :name syntax in template
+        environment = jinja2.Environment(extensions=['jinja2.ext.do'])
+        query = environment.from_string("""
+            SELECT DISTINCT variable.name
               FROM variable
-             ORDER BY name;
-        """
-        self.cursor.execute(query, dict())
+              {% if pattern is not none %}
+              JOIN file
+                ON file.id = variable.file_id
+             WHERE file.name GLOB :pattern
+              {% endif %}
+             ORDER BY variable.name;
+        """).render(pattern=pattern)
+        self.cursor.execute(query, dict(pattern=pattern))
         rows = self.cursor.fetchall()
         return [r for r, in rows]
 

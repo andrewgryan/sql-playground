@@ -9,6 +9,6 @@ if [[ "${CONFIG_FILE}" == "" ]] ; then
     echo "Please specify CONFIG_FILE"
     exit 2
 fi
-bokeh serve app/ --show --args \
+bokeh serve app/ --dev --args \
     --database ${DATABASE} \
     --config-file ${CONFIG_FILE}
