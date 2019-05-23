@@ -19,6 +19,7 @@ class View(object):
                 (state.valid_time is not None) and
                 (state.pressure is not None)):
             p = float(state.pressure.replace("hPa", ""))
+            print(p)
             path, pts = self.database.path_points(
                 state.variable,
                 state.initial_time,

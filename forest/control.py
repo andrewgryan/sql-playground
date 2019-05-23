@@ -106,6 +106,8 @@ class Controls(Observable):
 
     @staticmethod
     def hpa(p):
+        if p < 1:
+            return "{}hPa".format(str(p))
         return "{}hPa".format(int(p))
 
     @staticmethod

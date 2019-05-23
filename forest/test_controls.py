@@ -96,6 +96,11 @@ class TestControls(unittest.TestCase):
         expect = ["1000hPa", "950hPa", "850hPa"]
         self.assert_label_equal(expect, result)
 
+    def test_hpa_given_small_pressures(self):
+        result = control.Controls.hpa(0.001)
+        expect = "0.001hPa"
+        self.assertEqual(expect, result)
+
     def assert_label_equal(self, expect, result):
         result = [l for l, _ in result]
         self.assertEqual(expect, result)
