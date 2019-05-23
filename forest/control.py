@@ -53,6 +53,7 @@ class Controls(Observable):
         }
         for key, dropdown in self.dropdowns.items():
             util.autolabel(dropdown)
+            util.autowarn(dropdown)
             dropdown.on_click(self.on_click(key))
         self.layout = bokeh.layouts.column(
             self.dropdowns["pattern"],
@@ -89,12 +90,6 @@ class Controls(Observable):
                 initial_time=state.initial_time)
             valid_times = sorted(set(valid_times))
             self.dropdowns["valid_time"].menu = self.menu(valid_times)
-            if (
-                    (state.valid_time is not None) and
-                    (state.valid_time not in valid_times)):
-                self.dropdowns["valid_time"].button_type = "danger"
-            else:
-                self.dropdowns["valid_time"].button_type = "default"
 
     def on_click(self, key):
         """Wire up bokeh on_click callbacks to State changes"""
