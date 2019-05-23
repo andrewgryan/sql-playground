@@ -253,15 +253,15 @@ class Database(object):
     def valid_times(self,
                     variable=None,
                     pattern=None,
-                    initial=None):
+                    initial_time=None):
         """Valid times associated with search criteria"""
         # Note: SQL injection possible if not properly escaped
         #       use ? and :name syntax in template
         environment = jinja2.Environment(extensions=['jinja2.ext.do'])
         query = environment.from_string("""
             {% set EQNS = [] %}
-            {% if initial is not none %}
-               {% do EQNS.append('file.reference = :initial') %}
+            {% if initial_time is not none %}
+               {% do EQNS.append('file.reference = :initial_time') %}
             {% endif %}
             {% if pattern is not none %}
                {% do EQNS.append('file.name GLOB :pattern') %}
@@ -281,13 +281,13 @@ class Database(object):
              WHERE {{ EQNS | join(' AND ') }}
              {% endif %}
         """).render(
-            initial=initial,
+            initial_time=initial_time,
             variable=variable,
             pattern=pattern)
         self.cursor.execute(query, dict(
             variable=variable,
             pattern=pattern,
-            initial=initial))
+            initial_time=initial_time))
         rows = self.cursor.fetchall()
         return [time for time, in rows]
 

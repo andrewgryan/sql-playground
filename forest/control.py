@@ -5,7 +5,11 @@ import util
 from collections import namedtuple
 
 
-State = namedtuple("State", ("pattern", "variable", "initial"))
+State = namedtuple("State", (
+    "pattern",
+    "variable",
+    "initial_time",
+    "valid_time"))
 State.__new__.__defaults__ = (None,) * len(State._fields)
 
 
@@ -33,10 +37,7 @@ class Controls(Observable):
             patterns = []
         self.patterns = patterns
         self.database = database
-        self.initial_times = database.initial_times()
-        self.state = State(
-            initial=self.first(self.initial_times),
-            variable=None)
+        self.state = State()
         self.dropdowns = {
             "pattern": bokeh.models.Dropdown(
                 label="Model/observation",
@@ -50,9 +51,9 @@ class Controls(Observable):
             "pressure": bokeh.models.Dropdown(
                 label="Pressure")
         }
-        self.dropdowns["pattern"].on_click(self.on_pattern)
-        for dropdown in self.dropdowns.values():
+        for key, dropdown in self.dropdowns.items():
             util.autolabel(dropdown)
+            dropdown.on_click(self.on_click(key))
         self.layout = bokeh.layouts.column(
             self.dropdowns["pattern"],
             self.dropdowns["variable"],
@@ -67,8 +68,6 @@ class Controls(Observable):
 
     def render(self, state):
         """Configure dropdown menus"""
-        if state.pattern is None:
-            return
         variables = self.database.variables(pattern=state.pattern)
         self.dropdowns["variable"].menu = self.menu(variables)
 
@@ -76,19 +75,28 @@ class Controls(Observable):
             pattern=state.pattern)
         self.dropdowns["initial_time"].menu = self.menu(initial_times)
 
-    def on_pattern(self, pattern):
-        """Select observation/model file pattern"""
-        state = State(
-            pattern=pattern,
-            variable=self.state.variable,
-            initial=self.state.initial)
-        self.notify(state)
-        self.state = state
 
-    def on_variable(self, value):
-        state = next_state(self.state, variable=value)
-        self.notify(state)
-        self.state = state
+        if state.initial_time is not None:
+            valid_times = self.database.valid_times(
+                pattern=state.pattern,
+                variable=state.variable,
+                initial_time=state.initial_time)
+            valid_times = sorted(set(valid_times))
+            self.dropdowns["valid_time"].menu = self.menu(valid_times)
+            if (
+                    (state.valid_time is not None) and
+                    (state.valid_time not in valid_times)):
+                self.dropdowns["valid_time"].button_type = "danger"
+            else:
+                self.dropdowns["valid_time"].button_type = "default"
+
+    def on_click(self, key):
+        """Wire up bokeh on_click callbacks to State changes"""
+        def callback(value):
+            state = next_state(self.state, **{key: value})
+            self.notify(state)
+            self.state = state
+        return callback
 
     @staticmethod
     def menu(values, formatter=str):

@@ -177,7 +177,7 @@ class TestDatabase(unittest.TestCase):
             self.database.insert_file_name(path, initial)
             for i, time in enumerate(times):
                 self.database.insert_time(path, self.variable, time, i)
-        result = self.database.valid_times(initial="2019-01-01 00:00:00")
+        result = self.database.valid_times(initial_time="2019-01-01 00:00:00")
         expect = [
             "2019-01-01 03:00:00",
             "2019-01-01 06:00:00"]
@@ -202,7 +202,7 @@ class TestDatabase(unittest.TestCase):
                 self.database.insert_time(path, variable, time, i)
         result = self.database.valid_times(
             variable="y",
-            initial="2019-01-01 00:00:00")
+            initial_time="2019-01-01 00:00:00")
         expect = [
             "2019-01-01 06:00:00",
             "2019-01-01 09:00:00"]
