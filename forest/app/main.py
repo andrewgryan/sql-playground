@@ -1,5 +1,6 @@
 import bokeh.plotting
 import argparse
+import yaml
 import control
 import database as db
 
@@ -19,10 +20,24 @@ def parse_args(argv=None):
 
 def main():
     args = parse_args()
+    with open(args.config_file) as stream:
+        config = load_config(stream)
     database = db.Database.connect(args.database)
-    controls = control.Controls(database)
+    controls = control.Controls(database, patterns=config.patterns)
+    controls.subscribe(print)
     document = bokeh.plotting.curdoc()
     document.add_root(controls.layout)
+
+
+class Namespace(object):
+    def __init__(self, **kwargs):
+        self.__dict__.update(**kwargs)
+
+
+def load_config(stream):
+    data = yaml.load(stream)
+    patterns = [(m["name"], m["pattern"]) for m in data["models"]]
+    return Namespace(patterns=patterns)
 
 
 if __name__.startswith('bk'):

@@ -19,21 +19,21 @@ class TestControls(unittest.TestCase):
         key = "k"
         value = "*.nc"
         database = db.Database.connect(":memory:")
-        controls = control.Controls(database, patterns={key: value})
+        controls = control.Controls(database, patterns=[(key, value)])
         callback = unittest.mock.Mock()
         controls.subscribe(callback)
-        controls.on_pattern(key)
+        controls.on_pattern(value)
         callback.assert_called_once_with(control.State(pattern="*.nc"))
 
     def test_on_variable_sets_pressure_drop_down(self):
         self.controls.on_variable("air_temperature")
-        result = self.controls.drop_downs["pressure"].menu
+        result = self.controls.dropdowns["pressure"].menu
         expect = [("1000hPa", "1000hPa"), ("850hPa", "850hPa")]
         self.assertEqual(expect, result)
 
     def test_on_variable_sets_initial_times_drop_down(self):
         self.controls.on_variable("air_temperature")
-        result = self.controls.drop_downs["initial_time"].menu
+        result = self.controls.dropdowns["initial_time"].menu
         expect = [
             ("2019-01-01 00:00:00", "2019-01-01 00:00:00"),
             ("2019-01-01 12:00:00", "2019-01-01 12:00:00"),

@@ -1,6 +1,7 @@
 """Control navigation of FOREST data"""
 import bokeh.models
 import bokeh.layouts
+import util
 from collections import namedtuple
 
 
@@ -23,27 +24,31 @@ class Observable(object):
 class Controls(Observable):
     def __init__(self, database, patterns=None):
         if patterns is None:
-            patterns = {}
+            patterns = []
         self.patterns = patterns
         self.database = database
         self.initial_times = database.initial_times()
         self.state = State(
             initial=self.first(self.initial_times),
             variable=None)
-        self.drop_downs = {
-            "pattern": bokeh.models.Dropdown(label="Datasets"),
+        self.dropdowns = {
+            "pattern": bokeh.models.Dropdown(
+                label="Datasets",
+                menu=patterns),
             "pressure": bokeh.models.Dropdown(label="Pressure"),
             "initial_time": bokeh.models.Dropdown(label="Initial time")
         }
+        self.dropdowns["pattern"].on_click(self.on_pattern)
+        for dropdown in self.dropdowns.values():
+            util.autolabel(dropdown)
         self.layout = bokeh.layouts.column(
-            self.drop_downs["pattern"],
-            self.drop_downs["pressure"],
-            self.drop_downs["initial_time"])
+            self.dropdowns["pattern"],
+            self.dropdowns["pressure"],
+            self.dropdowns["initial_time"])
         super().__init__()
 
-    def on_pattern(self, key):
+    def on_pattern(self, pattern):
         """Select observation/model file pattern"""
-        pattern = self.patterns[key]
         state = State(
             pattern=pattern,
             variable=self.state.variable,
@@ -63,8 +68,8 @@ class Controls(Observable):
     def on_variable(self, value):
         initial_times = self.database.initial_times(value)
         pressures = self.database.pressures(value)
-        self.drop_downs["pressure"].menu = self.menu(pressures, self.hpa)
-        self.drop_downs["initial_time"].menu = self.menu(initial_times)
+        self.dropdowns["pressure"].menu = self.menu(pressures, self.hpa)
+        self.dropdowns["initial_time"].menu = self.menu(initial_times)
 
         state = State(variable=value, initial=self.state.initial)
         self.notify(state)
