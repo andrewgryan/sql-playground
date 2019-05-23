@@ -368,3 +368,24 @@ class TestDatabase(unittest.TestCase):
         result = self.database.pressures(variable="var_a", pattern="*_0.nc")
         expect = [950., 1000.]
         self.assertEqual(expect, result)
+
+    def test_pressures_related_to_pattern_and_variable_and_initial_time(self):
+        for (path, initial_time) in [
+                ("file_0.nc", dt.datetime(2019, 1, 1)),
+                ("file_1.nc", dt.datetime(2019, 1, 1, 12)),
+                ("file_2.nc", dt.datetime(2019, 1, 1, 12))]:
+            self.database.insert_file_name(path, initial_time)
+        for (path, variable, pressure, i) in [
+                ("file_0.nc", "var_a", 1000, 0),
+                ("file_0.nc", "var_a", 950, 1),
+                ("file_0.nc", "var_b", 750, 0),
+                ("file_1.nc", "var_a", 810, 0),
+                ("file_1.nc", "var_b", 800, 0),
+                ("file_2.nc", "var_b", 700, 0)]:
+            self.database.insert_pressure(path, variable, pressure, i)
+        result = self.database.pressures(
+            variable="var_a",
+            pattern="*_[01].nc",
+            initial_time=dt.datetime(2019, 1, 1, 12))
+        expect = [810.]
+        self.assertEqual(expect, result)

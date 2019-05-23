@@ -75,8 +75,14 @@ class Controls(Observable):
             pattern=state.pattern)
         self.dropdowns["initial_time"].menu = self.menu(initial_times)
 
-
         if state.initial_time is not None:
+            pressures = self.database.pressures(
+                pattern=state.pattern,
+                variable=state.variable,
+                initial_time=state.initial_time)
+            pressures = reversed(pressures)
+            self.dropdowns["pressure"].menu = self.menu(pressures, self.hpa)
+
             valid_times = self.database.valid_times(
                 pattern=state.pattern,
                 variable=state.variable,

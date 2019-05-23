@@ -291,42 +291,48 @@ class Database(object):
         rows = self.cursor.fetchall()
         return [time for time, in rows]
 
-    def pressures(self, variable=None, pattern=None):
+    def pressures(self, variable=None, pattern=None, initial_time=None):
         """Select pressures from database"""
         # Note: SQL injection possible if not properly escaped
         #       use ? and :name syntax in template
         environment = jinja2.Environment(extensions=['jinja2.ext.do'])
         query = environment.from_string("""
-            SELECT DISTINCT value
+            {% set EQNS = [] %}
+            {% if variable is not none %}
+               {% do EQNS.append('v.name = :variable') %}
+            {% endif %}
+            {% if pattern is not none %}
+               {% do EQNS.append('file.name GLOB :pattern') %}
+            {% endif %}
+            {% if initial_time is not none %}
+               {% do EQNS.append('file.reference = :initial_time') %}
+            {% endif %}
+            {% if EQNS %}
+            SELECT DISTINCT pressure.value
               FROM pressure
-             {% if (variable is not none) or (pattern is not none) %}
               JOIN variable_to_pressure AS vp
                 ON vp.pressure_id = pressure.id
               JOIN variable AS v
                 ON v.id = vp.variable_id
               JOIN file
                 ON v.file_id = file.id
-             {% endif %}
-             {% set EQNS = [] %}
-             {% if variable is not none %}
-                {% do EQNS.append('v.name = :variable') %}
-             {% endif %}
-             {% if pattern is not none %}
-                {% do EQNS.append('file.name GLOB :pattern') %}
-             {% endif %}
-             {% if EQNS %}
              WHERE {{ EQNS | join(' AND ') }}
-             {% endif %}
              ORDER BY value
+             {% else %}
+            SELECT DISTINCT value
+              FROM pressure
+             ORDER BY value
+             {% endif %}
         """).render(
             variable=variable,
-            pattern=pattern)
+            pattern=pattern,
+            initial_time=initial_time)
         self.cursor.execute(query, dict(
             variable=variable,
-            pattern=pattern))
+            pattern=pattern,
+            initial_time=initial_time))
         rows = self.cursor.fetchall()
         return [time for time, in rows]
-
 
     def fetch_times(self, path, variable):
         """Helper method to find times related to a variable"""
