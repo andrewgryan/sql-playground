@@ -9,7 +9,8 @@ State = namedtuple("State", (
     "pattern",
     "variable",
     "initial_time",
-    "valid_time"))
+    "valid_time",
+    "pressure"))
 State.__new__.__defaults__ = (None,) * len(State._fields)
 
 

@@ -2,6 +2,7 @@ import bokeh.plotting
 import argparse
 import yaml
 import control
+import view
 import database as db
 
 
@@ -25,8 +26,13 @@ def main():
     database = db.Database.connect(args.database)
     controls = control.Controls(database, patterns=config.patterns)
     controls.subscribe(print)
+
+    text = view.View(text="Hello, world!", database=database)
+    controls.subscribe(text.on_state)
+
     document = bokeh.plotting.curdoc()
     document.add_root(controls.layout)
+    document.add_root(text.div)
 
 
 class Namespace(object):
