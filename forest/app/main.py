@@ -27,7 +27,8 @@ def main():
     controls = control.Controls(database, patterns=config.patterns)
     controls.subscribe(print)
 
-    text = view.View(text="Hello, world!", database=database)
+    locator = db.Locator.connect(args.database)
+    text = view.View(text="Hello, world!", locator=locator)
     controls.subscribe(text.on_state)
 
     document = bokeh.plotting.curdoc()

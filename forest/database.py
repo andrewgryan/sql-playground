@@ -4,7 +4,81 @@ import netCDF4
 import jinja2
 
 
-class Database(object):
+class Connection(object):
+    def __init__(self, connection):
+        self.connection = connection
+        self.cursor = self.connection.cursor()
+
+    @classmethod
+    def connect(cls, path):
+        """Create database instance from location on disk or :memory:"""
+        return cls(sqlite3.connect(path))
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.close()
+
+    def close(self):
+        self.connection.commit()
+        self.connection.close()
+
+
+class Locator(Connection):
+    """Query database for path and index related to fields"""
+    def path_points(
+            self,
+            pattern,
+            variable,
+            initial_time,
+            valid_time,
+            pressure):
+        query = """
+            SELECT f.name, v.time_axis, v.pressure_axis, t.i, p.i
+              FROM file AS f
+              JOIN variable AS v
+                ON v.file_id = f.id
+              JOIN variable_to_time AS vt
+                ON vt.variable_id = v.id
+              JOIN time AS t
+                ON vt.time_id = t.id
+              JOIN variable_to_pressure AS vp
+                ON vp.variable_id = v.id
+              JOIN pressure AS p
+                ON p.id = vp.pressure_id
+             WHERE f.name GLOB :pattern
+               AND v.name = :variable
+               AND f.reference = :initial_time
+               AND t.value = :valid_time
+             ORDER BY ABS(p.value - :pressure) ASC
+        """
+        self.cursor.execute(query, dict(
+            pattern=pattern,
+            variable=variable,
+            initial_time=initial_time,
+            valid_time=valid_time,
+            pressure=pressure))
+        rows = self.cursor.fetchall()
+        print(rows)
+        for (path, ta, pa, ti, pi) in rows:
+            if ta == pa:
+                if ti != pi:
+                    continue
+                return path, (ti,)
+            elif ta is None:
+                return path, (pi,)
+            elif pa is None:
+                return path, (ti,)
+            else:
+                rank = max(ta, pa) + 1
+                pts = rank * [None]
+                pts[ta] = ti
+                pts[pa] = pi
+                return path, tuple(pts)
+
+
+class Database(Connection):
     """Stores index and paths of forecast diagnostics"""
     def __init__(self, connection):
         self.connection = connection
@@ -53,21 +127,6 @@ class Database(object):
                     time_id INTEGER,
                     PRIMARY KEY(variable_id, time_id))
         """)
-
-    @classmethod
-    def connect(cls, path):
-        """Create database instance from location on disk or :memory:"""
-        return cls(sqlite3.connect(path))
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, *args):
-        self.close()
-
-    def close(self):
-        self.connection.commit()
-        self.connection.close()
 
     def insert_netcdf(self, path):
         """Coordinate and meta-data information taken from NetCDF file"""
@@ -169,40 +228,6 @@ class Database(object):
         self.cursor.execute(query, dict(pattern=pattern))
         rows = self.cursor.fetchall()
         return [r for r, in rows]
-
-    def path_points(self, variable, initial, valid, pressure):
-        """Criteria needed to load diagnostics"""
-        pts = None
-        self.cursor.execute("""
-            SELECT file.name, time.i, pressure.i, v.time_axis, v.pressure_axis
-              FROM file
-              JOIN variable AS v
-                ON file.id = v.file_id
-              JOIN variable_to_time AS vt
-                ON vt.variable_id = v.id
-              JOIN time
-                ON vt.time_id = time.id
-              JOIN variable_to_pressure AS vp
-                ON vp.variable_id = v.id
-              JOIN pressure
-                ON vp.pressure_id = pressure.id
-             WHERE file.reference = :initial
-               AND v.name = :variable
-               AND time.value = :valid
-             ORDER BY ABS(pressure.value - :pressure)
-        """, dict(
-            initial=initial,
-            valid=valid,
-            variable=variable,
-            pressure=pressure))
-        rows = self.cursor.fetchall()
-        path, ti, pi, ta, pa = rows[0]
-        # Consider unit testing the logic below separately
-        if ta == pa:
-            pts = (ti,)
-        else:
-            pts = (ti, pi)
-        return path, pts
 
     def insert_file_name(self, path, reference_time=None):
         self.cursor.execute("""

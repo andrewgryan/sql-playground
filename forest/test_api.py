@@ -122,10 +122,14 @@ class TestAPI(unittest.TestCase):
         for path in self.paths:
             database.insert_netcdf(path)
 
+        locator = db.Locator(database.connection)
+
         # System under test
+        pattern = "*.nc"
         initial = to_datetime("2019-01-01 12:00")
         valid = to_datetime("2019-01-01 16:00")
-        r_path, r_pts = database.path_points(
+        r_path, r_pts = locator.path_points(
+            pattern,
             self.variable,
             initial,
             valid,
@@ -171,12 +175,15 @@ class TestAPI(unittest.TestCase):
         database = db.Database.connect(':memory:')
         for path in self.paths:
             database.insert_netcdf(path)
+        locator = db.Locator(database.connection)
 
         # System under test
+        pattern = "*.nc"
         initial = to_datetime("2019-01-01 12:00")
         valid = to_datetime("2019-01-01 16:00")
         pressure = 849.
-        r_path, r_pts = database.path_points(
+        r_path, r_pts = locator.path_points(
+            pattern,
             self.variable,
             initial,
             valid,

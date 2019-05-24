@@ -6,9 +6,9 @@ Image = namedtuple("Image", ("path", "variable", "pts"))
 
 
 class View(object):
-    def __init__(self, text, database=None):
+    def __init__(self, text, locator=None):
         self.div = bokeh.models.Div(text=text)
-        self.database = database
+        self.locator = locator
 
     def on_state(self, state):
         image = Image(path=None, variable=state.variable, pts=None)
@@ -20,7 +20,8 @@ class View(object):
                 (state.pressure is not None)):
             p = float(state.pressure.replace("hPa", ""))
             print(p)
-            path, pts = self.database.path_points(
+            path, pts = self.locator.path_points(
+                state.pattern,
                 state.variable,
                 state.initial_time,
                 state.valid_time,

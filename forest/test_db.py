@@ -389,3 +389,52 @@ class TestDatabase(unittest.TestCase):
             initial_time=dt.datetime(2019, 1, 1, 12))
         expect = [810.]
         self.assertEqual(expect, result)
+
+
+class TestLocator(unittest.TestCase):
+    def setUp(self):
+        self.connection = sqlite3.connect(":memory:")
+        self.database = db.Database(self.connection)
+        self.locator = db.Locator(self.connection)
+
+    def tearDown(self):
+        self.connection.close()
+
+    def test_path_points(self):
+        result = self.locator.path_points()
+        expect = []
+        self.assertEqual(expect, result)
+
+    def test_path_points(self):
+        pattern = "file_*.nc"
+        path = "file_000.nc"
+        variable = "temperature"
+        initial_time = dt.datetime(2019, 1, 1)
+        valid_time = dt.datetime(2019, 1, 1, 2)
+        pressure = 1000.
+        self.database.insert_file_name(
+            path,
+            initial_time)
+        self.database.insert_variable(
+            path,
+            variable,
+            time_axis=0,
+            pressure_axis=1)
+        self.database.insert_time(
+            path,
+            variable,
+            valid_time,
+            i=0)
+        self.database.insert_pressure(
+            path,
+            variable,
+            pressure,
+            i=0)
+        result = self.locator.path_points(
+            pattern,
+            variable,
+            initial_time,
+            valid_time,
+            pressure)
+        expect = ("file_000.nc", (0, 0))
+        self.assertEqual(expect, result)
