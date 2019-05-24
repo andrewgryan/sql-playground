@@ -112,7 +112,9 @@ class Database(Connection):
             CREATE TABLE IF NOT EXISTS variable_to_pressure (
                     variable_id INTEGER,
                     pressure_id INTEGER,
-                    PRIMARY KEY(variable_id, pressure_id))
+                    PRIMARY KEY(variable_id, pressure_id),
+                    FOREIGN KEY(variable_id) REFERENCES variable(id),
+                    FOREIGN KEY(pressure_id) REFERENCES pressure(id))
         """)
         self.cursor.execute("""
             CREATE TABLE IF NOT EXISTS time (
@@ -125,7 +127,9 @@ class Database(Connection):
             CREATE TABLE IF NOT EXISTS variable_to_time (
                     variable_id INTEGER,
                     time_id INTEGER,
-                    PRIMARY KEY(variable_id, time_id))
+                    PRIMARY KEY(variable_id, time_id),
+                    FOREIGN KEY(variable_id) REFERENCES variable(id),
+                    FOREIGN KEY(time_id) REFERENCES time(id))
         """)
 
     def insert_netcdf(self, path):
