@@ -9,6 +9,12 @@ if [[ "${CONFIG_FILE}" == "" ]] ; then
     echo "Please specify CONFIG_FILE"
     exit 2
 fi
-bokeh serve app/ --dev --args \
+PORT=8080
+bokeh serve app/ \
+    --dev \
+    --port ${PORT} \
+    --allow-websocket-origin eld388:${PORT} \
+    --allow-websocket-origin localhost:${PORT} \
+    --args \
     --database ${DATABASE} \
     --config-file ${CONFIG_FILE}
