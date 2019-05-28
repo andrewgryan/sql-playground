@@ -25,6 +25,158 @@ class Connection(object):
         self.connection.close()
 
 
+class CoordinateDB(Connection):
+    def __init__(self, connection):
+        self.connection = connection
+        self.cursor = self.connection.cursor()
+        self.cursor.execute("""
+        CREATE TABLE file (
+                  id INTEGER PRIMARY KEY,
+                name TEXT,
+                UNIQUE(name))
+        """)
+        self.cursor.execute("""
+        CREATE TABLE axis (
+                  id INTEGER PRIMARY KEY,
+            variable TEXT,
+                name TEXT,
+               value INTEGER,
+             file_id INTEGER,
+             FOREIGN KEY(file_id) REFERENCES file(id))
+        """)
+        self.cursor.execute("""
+        CREATE TABLE time (
+                  id INTEGER PRIMARY KEY,
+            variable TEXT,
+                   i INTEGER,
+               value TEXT,
+             file_id INTEGER,
+             FOREIGN KEY(file_id) REFERENCES file(id))
+        """)
+        self.cursor.execute("""
+        CREATE TABLE pressure (
+                  id INTEGER PRIMARY KEY,
+            variable TEXT,
+                   i INTEGER,
+               value REAL,
+             file_id INTEGER,
+             FOREIGN KEY(file_id) REFERENCES file(id))
+        """)
+
+    def insert_pressures(self, path, variable, values):
+        self.cursor.execute("""
+            INSERT OR IGNORE INTO file (name) VALUES (:path)
+        """, dict(path=path))
+        query = """
+        INSERT INTO pressure (variable, i, value, file_id)
+             VALUES (
+                 :variable,
+                 :i,
+                 :value,
+                 (SELECT id FROM file WHERE name = :path))
+        """
+        data = [dict(
+            path=path,
+            variable=variable,
+            i=i,
+            value=value) for i, value in enumerate(values)]
+        self.cursor.executemany(query, data)
+
+    def pressure_index(self, pattern, variable, value):
+        self.cursor.execute("""
+        SELECT pressure.i
+          FROM pressure
+          JOIN file
+            ON file.id = pressure.file_id
+         WHERE file.name GLOB :pattern
+           AND pressure.variable = :variable
+           AND pressure.value = :value
+        """, dict(
+            pattern=pattern,
+            variable=variable,
+            value=value))
+        rows = self.cursor.fetchall()
+        return [i for i, in rows]
+
+    def insert_times(self, path, variable, values):
+        self.cursor.execute("""
+            INSERT OR IGNORE INTO file (name) VALUES (:path)
+        """, dict(path=path))
+        data = [dict(
+            path=path,
+            variable=variable,
+            i=i,
+            value=value) for i, value in enumerate(values)]
+        self.cursor.executemany("""
+            INSERT INTO time (variable, i, value, file_id)
+                 VALUES (
+                 :variable,
+                 :i,
+                 :value,
+                 (SELECT id FROM file WHERE name = :path))
+        """, data)
+
+    def time_index(self, pattern, variable, value):
+        self.cursor.execute("""
+        SELECT time.i
+          FROM time
+          JOIN file
+            ON file.id = time.file_id
+         WHERE file.name GLOB :pattern
+           AND time.variable = :variable
+           AND time.value = :value
+        """, dict(
+            pattern=pattern,
+            variable=variable,
+            value=value))
+        rows = self.cursor.fetchall()
+        return [i for i, in rows]
+
+    def insert_axis(self, path, variable, coordinate, axis):
+        self.cursor.execute("""
+        INSERT OR IGNORE INTO file (name) VALUES (:path)
+        """, dict(path=path))
+        self.cursor.execute("""
+        INSERT INTO axis (variable, name, value, file_id)
+             VALUES (
+                     :variable,
+                     :coordinate,
+                     :axis,
+                     (SELECT id FROM file WHERE name = :path))
+        """, dict(
+            path=path,
+            variable=variable,
+            coordinate=coordinate,
+            axis=axis))
+
+    def axis(self, path, variable, coordinate):
+        self.cursor.execute("""
+        SELECT value FROM axis
+          JOIN file
+            ON file.id = axis.file_id
+         WHERE file.name = :path
+           AND axis.variable = :variable
+           AND axis.name = :coordinate
+        """, dict(
+            path=path,
+            variable=variable,
+            coordinate=coordinate))
+        rows = self.cursor.fetchall()
+        return rows[0][0]
+
+    def coordinates(self, path, variable):
+        self.cursor.execute("""
+        SELECT axis.name, axis.value FROM axis
+          JOIN file
+            ON file.id = axis.file_id
+         WHERE file.name = :path
+           AND axis.variable = :variable
+        """, dict(
+            path=path,
+            variable=variable))
+        return self.cursor.fetchall()
+
+
 class Locator(Connection):
     """Query database for path and index related to fields"""
     def path_points(

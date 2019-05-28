@@ -391,6 +391,155 @@ class TestDatabase(unittest.TestCase):
         self.assertEqual(expect, result)
 
 
+class TestCoordinateDB(unittest.TestCase):
+    def setUp(self):
+        self.database = db.CoordinateDB.connect(":memory:")
+
+    def tearDown(self):
+        self.database.close()
+
+    def test_insert_axis(self):
+        path = "file.nc"
+        variable = "air_temperature"
+        coord = "time"
+        axis = 0
+        self.database.insert_axis(path, variable, coord, axis)
+        result = self.database.axis(path, variable, coord)
+        expect = axis
+        self.assertEqual(expect, result)
+
+    def test_insert_axis_given_mutiple_coordinates(self):
+        path = "file.nc"
+        variable = "air_temperature"
+        for coord, axis in [
+                ("time", 0),
+                ("pressure", 1),
+                ("latitude", 2),
+                ("longitude", 3)
+            ]:
+            self.database.insert_axis(path, variable, coord, axis)
+        result = self.database.axis(path, variable, "pressure")
+        expect = 1
+        self.assertEqual(expect, result)
+
+    def test_insert_axis_given_mutiple_variables(self):
+        path = "file.nc"
+        for variable, coords in [
+                ("mslp", [
+                    ("time", 0),
+                    ("pressure", 1)]),
+                ("relative_humidity", [
+                    ("time", 2),
+                    ("pressure", 3),
+                    ("forecast_period", 4)])
+            ]:
+            for coord, axis in coords:
+                self.database.insert_axis(path, variable, coord, axis)
+        result = self.database.axis(path, "relative_humidity", "pressure")
+        expect = 3
+        self.assertEqual(expect, result)
+
+    def test_insert_axis_given_mutiple_paths(self):
+        for path, variable, coords in [
+                ("a.nc", "mslp", [
+                    ("time", 0),
+                    ("pressure", 1)]),
+                ("b.nc", "mslp", [
+                    ("time", 2),
+                    ("pressure", 3),
+                    ("forecast_period", 4)])
+            ]:
+            for coord, axis in coords:
+                self.database.insert_axis(path, variable, coord, axis)
+        result = self.database.axis("b.nc", "mslp", "time")
+        expect = 2
+        self.assertEqual(expect, result)
+
+    def test_coordinates_related_to_variable(self):
+        for path, variable, coords in [
+                ("a.nc", "mslp", [
+                    ("time", 0),
+                    ("pressure", 1)]),
+                ("b.nc", "mslp", [
+                    ("time", 2),
+                    ("pressure", 3),
+                    ("forecast_period", 4)])
+            ]:
+            for coord, axis in coords:
+                self.database.insert_axis(path, variable, coord, axis)
+        result = self.database.coordinates("b.nc", "mslp")
+        expect = [
+            ("time", 2),
+            ("pressure", 3),
+            ("forecast_period", 4)]
+        self.assertEqual(expect, result)
+
+    def test_insert_time_coord(self):
+        pattern = "*.nc"
+        path = "file.nc"
+        variable = "temperature"
+        time = dt.datetime(2019, 1, 1)
+        times = 3 * [time]
+        self.database.insert_times(path, variable, times)
+        result = self.database.time_index(pattern, variable, time)
+        expect = [0, 1, 2]
+        self.assertEqual(expect, result)
+
+    def test_insert_times_related_to_variable(self):
+        pattern = "*.nc"
+        path = "file.nc"
+        for variable, times in [
+                ("mslp", [
+                    dt.datetime(2019, 1, 1),
+                    dt.datetime(2019, 1, 1, 6),
+                    dt.datetime(2019, 1, 1, 12)]),
+                ("relative_humidity", [
+                    dt.datetime(2019, 1, 1, 6),
+                    dt.datetime(2019, 1, 1, 12)])]:
+            self.database.insert_times(path, variable, times)
+        result = self.database.time_index(
+            pattern,
+            "relative_humidity",
+            dt.datetime(2019, 1, 1, 12))
+        expect = [1]
+        self.assertEqual(expect, result)
+
+    def test_insert_times_related_to_path(self):
+        variable = "mslp"
+        for path, variable, times in [
+                ("a.nc", variable, [
+                    dt.datetime(2019, 1, 1),
+                    dt.datetime(2019, 1, 1, 6),
+                    dt.datetime(2019, 1, 1, 12)]),
+                ("b.nc", variable, [
+                    dt.datetime(2019, 1, 1, 6),
+                    dt.datetime(2019, 1, 1, 12)])]:
+            self.database.insert_times(path, variable, times)
+        result = self.database.time_index(
+            "a.nc",
+            variable,
+            dt.datetime(2019, 1, 1, 12))
+        expect = [2]
+        self.assertEqual(expect, result)
+
+    def test_insert_pressures(self):
+        path = "file.nc"
+        variable = "relative_humidity"
+        values = [1., 100., 750., 1000.]
+        self.database.insert_pressures(path, variable, values)
+        result = self.database.pressure_index(path, variable, 750.)
+        expect = [2]
+        self.assertEqual(expect, result)
+
+    def test_insert_pressures_given_different_variable(self):
+        path = "file.nc"
+        self.database.insert_pressures(path, "mslp", [100., 200., 750.])
+        self.database.insert_pressures(path, "temperature", [750., 1000.])
+        result = self.database.pressure_index(path, "temperature", 750.)
+        expect = [0]
+        self.assertEqual(expect, result)
+
+
 class TestLocator(unittest.TestCase):
     def setUp(self):
         self.connection = sqlite3.connect(":memory:")
