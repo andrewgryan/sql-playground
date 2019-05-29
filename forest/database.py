@@ -431,6 +431,12 @@ class Database(Connection):
                 (SELECT id FROM pressure WHERE value=:pressure AND i=:i))
         """, dict(path=path, variable=variable, pressure=pressure, i=i))
 
+    def time_index(self, time):
+        self.cursor.execute("""
+            SELECT i FROM time WHERE value = :time
+        """, dict(time=time))
+        return self.cursor.fetchall()
+
     def valid_times(self,
                     variable=None,
                     pattern=None,

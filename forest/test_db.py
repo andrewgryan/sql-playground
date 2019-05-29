@@ -4,6 +4,24 @@ import sqlite3
 import database as db
 
 
+class TestIndex(unittest.TestCase):
+    def test_time_index(self):
+        database = db.Database.connect(":memory:")
+        path = "file.nc"
+        variable = "variable"
+        times = [
+            dt.datetime(2019, 1, 1),
+            dt.datetime(2019, 1, 1, 6),
+            dt.datetime(2019, 1, 1, 12),
+            dt.datetime(2019, 1, 1, 18),
+        ]
+        database.insert_times(path, variable, times)
+        index = 2
+        result = database.time_index(times[index])
+        expect = index
+        self.assertEqual(expect, result)
+
+
 class TestDatabase(unittest.TestCase):
     def setUp(self):
         self.connection = sqlite3.connect(":memory:")
