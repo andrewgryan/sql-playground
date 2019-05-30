@@ -128,7 +128,7 @@ class CoordinateDB(Connection):
         """, dict(
             pattern=pattern,
             variable=variable,
-            value=value))
+            value=str(value)))
         rows = self.cursor.fetchall()
         return [i for i, in rows]
 
@@ -431,12 +431,6 @@ class Database(Connection):
                 (SELECT id FROM pressure WHERE value=:pressure AND i=:i))
         """, dict(path=path, variable=variable, pressure=pressure, i=i))
 
-    def time_index(self, time):
-        self.cursor.execute("""
-            SELECT i FROM time WHERE value = :time
-        """, dict(time=time))
-        return self.cursor.fetchall()
-
     def valid_times(self,
                     variable=None,
                     pattern=None,
@@ -537,7 +531,7 @@ class Database(Connection):
         self.insert_variable(path, variable)
         self.cursor.execute("""
             INSERT OR IGNORE INTO time (i, value) VALUES (:i,:value)
-        """, dict(i=i, value=time))
+        """, dict(i=i, value=str(time)))
         self.cursor.execute("""
             INSERT OR IGNORE INTO variable_to_time (variable_id, time_id)
             VALUES(
@@ -545,7 +539,7 @@ class Database(Connection):
                    JOIN file ON variable.file_id = file.id
                   WHERE file.name=:path AND variable.name=:variable),
                 (SELECT id FROM time WHERE value=:value AND i=:i))
-        """, dict(path=path, variable=variable, value=time, i=i))
+        """, dict(path=path, variable=variable, value=str(time), i=i))
 
     def find_time(self, variable, time):
         self.cursor.execute("""
